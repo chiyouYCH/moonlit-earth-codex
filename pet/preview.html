@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>望归 · Lunar — 宠物预览</title>
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; color: #3f443f; background: #f5f0e6; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(ellipse at 85% 0%, #c9d9d12b, transparent 55%), #f5f0e6; }
+    button { font: inherit; color: inherit; cursor: pointer; }
+    button:focus-visible { outline: 3px solid #719b9a; outline-offset: 3px; }
+    button:disabled { cursor: default; opacity: .5; }
+    .page { max-width: 1100px; margin: auto; padding: 44px 28px; }
+    .eyebrow { color: #887c67; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; }
+    h1 { font-size: clamp(30px, 4vw, 44px); font-weight: 600; letter-spacing: -.04em; margin: 12px 0; }
+    h1 span { font-weight: 400; color: #8b9186; }
+    .intro { line-height: 1.8; color: #77786c; margin: 0 0 28px; font-size: 14px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 288px; gap: 24px; }
+    .stage { min-height: 470px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px; border: 1px solid #b5aa912f; border-radius: 28px; background: #faf7ee; overflow: hidden; padding: 24px 10px; transition: background-color 180ms ease; }
+    .stage.dark { background: #242d32; border-color: #354147; }
+    .sprite { --scale: 1; flex: none; width: calc(192px * var(--scale)); height: calc(208px * var(--scale)); background-repeat: no-repeat; background-size: calc(1536px * var(--scale)) calc(1872px * var(--scale)); }
+    .sprite[hidden] { display: none; }
+    .stage-note { font-size: 12px; letter-spacing: .04em; color: #918b7c; text-align: center; line-height: 1.8; }
+    .dark .stage-note { color: #b7c3c5; }
+    .missing { max-width: 380px; text-align: center; padding: 20px; color: #797363; line-height: 1.8; font-size: 14px; }
+    .dark .missing { color: #bac3c5; }
+    .missing p { margin: 0 0 16px; }
+    .missing code { overflow-wrap: anywhere; font-size: 12px; }
+    .controls { display: flex; flex-direction: column; gap: 24px; padding: 10px 0; }
+    h2 { font-size: 12px; color: #847b6d; font-weight: 500; margin: 0 0 12px; }
+    .states { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .state { border: 1px solid #c9c0ab78; background: #ffffff30; border-radius: 12px; padding: 12px; text-align: left; }
+    .state span { display: block; font-size: 10px; color: #969184; margin-top: 5px; }
+    .state[aria-pressed="true"] { border-color: #718f89; background: #dce7de70; color: #395650; }
+    .segmented { display: inline-flex; padding: 3px; gap: 3px; border: 1px solid #c9c0ab78; border-radius: 10px; }
+    .segmented button { background: transparent; border: 0; border-radius: 7px; padding: 7px 12px; font-size: 12px; }
+    .segmented button[aria-pressed="true"] { background: #fffaf0; box-shadow: 0 1px 4px #4e49300d; }
+    .options { display: flex; gap: 22px; flex-wrap: wrap; }
+    .play { border: 1px solid #718f89; border-radius: 11px; padding: 11px 18px; color: #36574f; background: #dce7de70; }
+    .play-row { display: flex; gap: 12px; align-items: center; }
+    .frame { color: #8a8275; font-size: 11px; font-variant-numeric: tabular-nums; }
+    .caption { font-size: 12px; line-height: 1.8; color: #8a8275; margin: 10px 0 0; }
+    footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; color: #968d7a; font-size: 11px; line-height: 1.8; margin-top: 22px; }
+    @media (max-width: 740px) { .page { padding: 28px 18px; } .layout { grid-template-columns: 1fr; gap: 18px; } .stage { min-height: 450px; } .controls { gap: 18px; } .states { grid-template-columns: repeat(3, 1fr); } }
+    @media (prefers-reduced-motion: reduce) { .stage { transition: none; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="eyebrow">Moonlit Earth · Companion</div>
+      <h1>望归 <span>· Lunar</span></h1>
+      <p class="intro">从寂静的月面，遥望人间灯火。<br>一个陪你安静工作的小宇航员。</p>
+    </header>
+    <div class="layout">
+      <section class="stage" id="stage" aria-label="宠物动画预览">
+        <div class="sprite" id="sprite" role="img" aria-label="望归小宇航员，待机状态" hidden></div>
+        <div class="missing" id="missing" role="status">
+          <p id="load-message">正在读取本地宠物图片…</p>
+          <button class="play" id="retry" hidden>重新读取图片</button>
+        </div>
+        <div class="stage-note" id="stage-note" hidden>待机 · Idle</div>
+      </section>
+      <aside class="controls" aria-label="预览控制">
+        <section>
+          <h2>动作状态</h2>
+          <div class="states" id="states"></div>
+        </section>
+        <div class="options">
+          <section>
+            <h2>背景</h2>
+            <div class="segmented" aria-label="背景颜色">
+              <button id="light" aria-pressed="true">纸白</button>
+              <button id="dark" aria-pressed="false">深空</button>
+            </div>
+          </section>
+          <section>
+            <h2>显示尺寸</h2>
+            <div class="segmented" aria-label="显示尺寸">
+              <button id="size-one" aria-pressed="true">1×</button>
+              <button id="size-two" aria-pressed="false">2×</button>
+            </div>
+          </section>
+        </div>
+        <section>
+          <div class="play-row">
+            <button class="play" id="play" disabled>暂停动画</button>
+            <span class="frame" id="frame">等待图片</span>
+          </div>
+          <p class="caption" id="motion-note">按官方逐帧时长循环预览当前动作。实际工作时的状态由 Codex 控制。</p>
+        </section>
+      </aside>
+    </div>
+    <footer><span>本地离线预览 · 无网络请求</span><span>Sprite v1 · 192 × 208 / 帧 · 9 种状态</span></footer>
+  </main>
+  <script>
+    "use strict";
+    const assetPath = "package/wanggui-lunar/spritesheet.webp";
+    const animations = [
+      { key: "idle", name: "待机", english: "Idle", durations: [280, 110, 110, 140, 140, 320] },
+      { key: "running-right", name: "向右走", english: "Walk right", durations: [120, 120, 120, 120, 120, 120, 120, 220] },
+      { key: "running-left", name: "向左走", english: "Walk left", durations: [120, 120, 120, 120, 120, 120, 120, 220] },
+      { key: "waving", name: "挥手", english: "Wave", durations: [140, 140, 140, 280] },
+      { key: "jumping", name: "轻跃", english: "Jump", durations: [140, 140, 140, 140, 280] },
+      { key: "failed", name: "遇到难题", english: "Failed", durations: [140, 140, 140, 140, 140, 140, 140, 240] },
+      { key: "waiting", name: "等你回应", english: "Waiting", durations: [150, 150, 150, 150, 150, 260] },
+      { key: "running", name: "专心工作", english: "Working", durations: [120, 120, 120, 120, 120, 220] },
+      { key: "review", name: "检查成果", english: "Review", durations: [150, 150, 150, 150, 150, 280] }
+    ];
+    const element = id => document.getElementById(id);
+    const sprite = element("sprite");
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let currentRow = 0;
+    let currentFrame = 0;
+    let scale = 1;
+    let loaded = false;
+    let playing = !reducedMotion.matches;
+    let manualPlayback = false;
+    let timer = null;
+
+    function stopTimer() {
+      if (timer !== null) window.clearTimeout(timer);
+      timer = null;
+    }
+    function drawFrame() {
+      sprite.style.backgroundPosition = `${-currentFrame * 192 * scale}px ${-currentRow * 208 * scale}px`;
+      element("frame").textContent = loaded ? `${currentFrame + 1} / ${animations[currentRow].durations.length} 帧` : "等待图片";
+    }
+    function updatePlaybackButton() {
+      element("play").textContent = playing ? "暂停动画" : "播放动画";
+      element("play").setAttribute("aria-pressed", String(playing));
+    }
+    function scheduleNextFrame() {
+      stopTimer();
+      if (!loaded || !playing || document.hidden) return;
+      timer = window.setTimeout(() => {
+        currentFrame = (currentFrame + 1) % animations[currentRow].durations.length;
+        drawFrame();
+        scheduleNextFrame();
+      }, animations[currentRow].durations[currentFrame]);
+    }
+    function selectState(row) {
+      currentRow = row;
+      currentFrame = 0;
+      const state = animations[row];
+      document.querySelectorAll(".state").forEach((button, index) => button.setAttribute("aria-pressed", String(index === row)));
+      sprite.setAttribute("aria-label", `望归小宇航员，${state.name}状态`);
+      element("stage-note").textContent = `${state.name} · ${state.english}`;
+      drawFrame();
+      scheduleNextFrame();
+    }
+    animations.forEach((state, index) => {
+      const button = document.createElement("button");
+      button.className = "state";
+      button.type = "button";
+      button.setAttribute("aria-pressed", String(index === 0));
+      button.append(document.createTextNode(state.name));
+      const subtitle = document.createElement("span");
+      subtitle.textContent = state.english;
+      button.append(subtitle);
+      button.addEventListener("click", () => selectState(index));
+      element("states").append(button);
+    });
+    function setBackground(dark) {
+      element("stage").classList.toggle("dark", dark);
+      element("light").setAttribute("aria-pressed", String(!dark));
+      element("dark").setAttribute("aria-pressed", String(dark));
+    }
+    element("light").addEventListener("click", () => setBackground(false));
+    element("dark").addEventListener("click", () => setBackground(true));
+    function setScale(value) {
+      scale = value;
+      sprite.style.setProperty("--scale", value);
+      element("size-one").setAttribute("aria-pressed", String(value === 1));
+      element("size-two").setAttribute("aria-pressed", String(value === 2));
+      drawFrame();
+    }
+    element("size-one").addEventListener("click", () => setScale(1));
+    element("size-two").addEventListener("click", () => setScale(2));
+    element("play").addEventListener("click", () => {
+      manualPlayback = true;
+      playing = !playing;
+      updatePlaybackButton();
+      scheduleNextFrame();
+    });
+    function updateMotionNote() {
+      element("motion-note").textContent = reducedMotion.matches
+        ? "已遵循系统“减少动态效果”，默认显示静帧；可手动点击播放。"
+        : "按官方逐帧时长循环预览当前动作。实际工作时的状态由 Codex 控制。";
+    }
+    reducedMotion.addEventListener("change", () => {
+      if (!manualPlayback) playing = !reducedMotion.matches;
+      updateMotionNote();
+      updatePlaybackButton();
+      scheduleNextFrame();
+    });
+    document.addEventListener("visibilitychange", scheduleNextFrame);
+    function showLoadError(message) {
+      element("load-message").textContent = message;
+      element("retry").hidden = false;
+      element("missing").hidden = false;
+    }
+    function loadAsset() {
+      stopTimer();
+      loaded = false;
+      sprite.hidden = true;
+      element("play").disabled = true;
+      element("stage-note").hidden = true;
+      element("retry").hidden = true;
+      element("missing").hidden = false;
+      element("load-message").textContent = "正在读取本地宠物图片…";
+      const image = new Image();
+      image.onload = () => {
+        if (image.naturalWidth !== 1536 || image.naturalHeight !== 1872) {
+          showLoadError(`图片尺寸是 ${image.naturalWidth} × ${image.naturalHeight}，本预览需要 v1 的 1536 × 1872 精灵图。`);
+          return;
+        }
+        loaded = true;
+        sprite.style.backgroundImage = `url("${image.src}")`;
+        sprite.hidden = false;
+        element("missing").hidden = true;
+        element("stage-note").hidden = false;
+        element("play").disabled = false;
+        drawFrame();
+        scheduleNextFrame();
+      };
+      image.onerror = () => showLoadError(`宠物图片尚未就绪。请将完整宠物文件夹与此页面保持在一起，确认 ${assetPath} 已生成后重新读取。`);
+      image.src = `${assetPath}?preview=${Date.now()}`;
+    }
+    element("retry").addEventListener("click", loadAsset);
+    updateMotionNote();
+    updatePlaybackButton();
+    loadAsset();
+  </script>
+</body>
+</html>

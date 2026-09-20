@@ -1,0 +1,2 @@
+# Optional: offline spritesheet validation (tested with this Pillow version).
+Pillow==12.3.0
